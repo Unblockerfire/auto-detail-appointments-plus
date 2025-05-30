@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,17 +17,13 @@ interface Appointment {
   phone: string;
   service: string;
   date: string;
-  time: string;
-  location: string;
-  address: string;
   status: string;
   assignedTo: string;
-  total: number;
-  dirtiness: string;
-  useCustomerWater: boolean;
-  addOns: string[];
-  wantsLittleTree: boolean;
-  notes: string;
+}
+
+interface Worker {
+  id: number;
+  name: string;
 }
 
 const Admin = () => {
@@ -36,13 +32,16 @@ const Admin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
-  // Real appointments that will be populated from quote submissions
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [workers, setWorkers] = useState<Worker[]>([]);
 
-  // Worker management
-  const [workers, setWorkers] = useState<string[]>([]);
-  const [newWorkerName, setNewWorkerName] = useState("");
+  // Load appointments from localStorage on mount
+  useEffect(() => {
+    const savedAppointments = localStorage.getItem("appointments");
+    if (savedAppointments) {
+      setAppointments(JSON.parse(savedAppointments));
+    }
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,95 +58,77 @@ const Admin = () => {
     navigate("/");
   };
 
-  const addWorker = () => {
-    if (newWorkerName.trim() && !workers.includes(newWorkerName.trim())) {
-      setWorkers([...workers, newWorkerName.trim()]);
-      setNewWorkerName("");
-    }
+  const addWorker = (name: string) => {
+    const newWorker = { id: Date.now(), name };
+    setWorkers(prev => [...prev, newWorker]);
   };
 
-  const removeWorker = (workerName: string) => {
-    setWorkers(workers.filter(w => w !== workerName));
-    // Also remove from any assigned appointments
-    setAppointments(prev => prev.map(apt => 
-      apt.assignedTo === workerName ? { ...apt, assignedTo: "" } : apt
-    ));
+  const removeWorker = (id: number) => {
+    setWorkers(prev => prev.filter(worker => worker.id !== id));
   };
 
   const updateAppointmentStatus = (id: number, status: string) => {
-    setAppointments(prev => prev.map(apt => 
-      apt.id === id ? { ...apt, status } : apt
-    ));
+    const updated = appointments.map(appt =>
+      appt.id === id ? { ...appt, status } : appt
+    );
+    setAppointments(updated);
+    localStorage.setItem("appointments", JSON.stringify(updated));
   };
 
-  const assignWorker = (id: number, worker: string) => {
-    setAppointments(prev => prev.map(apt => 
-      apt.id === id ? { ...apt, assignedTo: worker } : apt
-    ));
+  const assignWorker = (id: number, workerName: string) => {
+    const updated = appointments.map(appt =>
+      appt.id === id ? { ...appt, assignedTo: workerName } : appt
+    );
+    setAppointments(updated);
+    localStorage.setItem("appointments", JSON.stringify(updated));
   };
 
-  // Function to add new appointments from quote submissions
-  const addAppointment = (appointmentData: Omit<Appointment, 'id' | 'status' | 'assignedTo'>) => {
-    const newAppointment: Appointment = {
-      ...appointmentData,
+  const addAppointment = (data: Omit<Appointment, 'id' | 'status' | 'assignedTo'>) => {
+    const newAppt: Appointment = {
+      ...data,
       id: Date.now(),
       status: "Pending",
       assignedTo: ""
     };
-    setAppointments(prev => [...prev, newAppointment]);
-    console.log("New appointment added:", newAppointment);
+    const updated = [...appointments, newAppt];
+    setAppointments(updated);
+    localStorage.setItem("appointments", JSON.stringify(updated));
+    console.log("New appointment added:", newAppt);
   };
 
-  // Store the addAppointment function globally so the Quote page can access it
-  if (typeof window !== 'undefined') {
+  // Expose globally for the Quote page
+  if (typeof window !== "undefined") {
     (window as any).addAppointment = addAppointment;
   }
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <div className="flex items-center justify-center space-x-3 mb-4">
-              <div className="bg-blue-600 rounded-lg p-2">
-                <Car className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <CardTitle>Admin Login</CardTitle>
-                <CardDescription>Foam Kings Management</CardDescription>
-              </div>
-            </div>
+            <CardTitle>Admin Login</CardTitle>
+            <CardDescription>Enter your admin credentials</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label>Email</Label>
                 <Input
-                  id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter admin email"
-                  required
+                  onChange={e => setEmail(e.target.value)}
                 />
               </div>
               <div>
-                <Label htmlFor="password">Password</Label>
+                <Label>Password</Label>
                 <Input
-                  id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  required
+                  onChange={e => setPassword(e.target.value)}
                 />
               </div>
-              {error && (
-                <p className="text-red-600 text-sm">{error}</p>
-              )}
-              <Button type="submit" className="w-full">
-                Login
-              </Button>
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <Button type="submit" className="w-full">Login</Button>
             </form>
           </CardContent>
         </Card>
@@ -158,57 +139,19 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
       <AdminHeader onLogout={handleLogout} />
-      
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <StatsCards appointments={appointments} workers={workers} />
-        
-        {/* Worker Management Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Worker Management</CardTitle>
-            <CardDescription>Add and manage your workers</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex space-x-2 mb-4">
-              <Input
-                placeholder="Enter worker name"
-                value={newWorkerName}
-                onChange={(e) => setNewWorkerName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addWorker()}
-              />
-              <Button onClick={addWorker} disabled={!newWorkerName.trim()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Worker
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {workers.map((worker) => (
-                <div key={worker} className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-lg">
-                  <span>{worker}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeWorker(worker)}
-                    className="h-6 w-6 p-0 hover:bg-red-100"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-              {workers.length === 0 && (
-                <p className="text-gray-500 text-sm">No workers added yet. Add your first worker above.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <AppointmentsTable 
+      <div className="p-4 space-y-6">
+        <StatsCards appointments={appointments} />
+        <AppointmentsTable
           appointments={appointments}
+          onUpdateStatus={updateAppointmentStatus}
+          onAssignWorker={assignWorker}
           workers={workers}
-          onStatusUpdate={updateAppointmentStatus}
-          onWorkerAssign={assignWorker}
         />
-        <WorkerStats appointments={appointments} workers={workers} />
+        <WorkerStats
+          workers={workers}
+          onAddWorker={addWorker}
+          onRemoveWorker={removeWorker}
+        />
       </div>
     </div>
   );
