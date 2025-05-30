@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,7 @@ interface Appointment {
 }
 
 const Admin = () => {
+  const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,6 +52,11 @@ const Admin = () => {
     } else {
       setError("Invalid credentials");
     }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    navigate("/");
   };
 
   const addWorker = () => {
@@ -84,11 +90,12 @@ const Admin = () => {
   const addAppointment = (appointmentData: Omit<Appointment, 'id' | 'status' | 'assignedTo'>) => {
     const newAppointment: Appointment = {
       ...appointmentData,
-      id: Date.now(), // Simple ID generation
+      id: Date.now(),
       status: "Pending",
       assignedTo: ""
     };
     setAppointments(prev => [...prev, newAppointment]);
+    console.log("New appointment added:", newAppointment);
   };
 
   // Store the addAppointment function globally so the Quote page can access it
@@ -150,7 +157,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
-      <AdminHeader onLogout={() => setIsLoggedIn(false)} />
+      <AdminHeader onLogout={handleLogout} />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         <StatsCards appointments={appointments} workers={workers} />
