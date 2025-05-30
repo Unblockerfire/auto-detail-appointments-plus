@@ -26,26 +26,62 @@ const Quote = () => {
     selectedDate: null as Date | null,
     selectedTime: "",
     notes: "",
-    addOns: [] as string[]
+    addOns: [] as string[],
+    wantsLittleTree: false
   });
 
   const packages = [
-    { id: "express", name: "Express Wash", emoji: "🧼", dropOff: 30, mobile: 40 },
-    { id: "full", name: "Full Detail", emoji: "💦", dropOff: 120, mobile: 140 },
-    { id: "interior", name: "Interior Only", emoji: "🧽", dropOff: 70, mobile: 85 },
-    { id: "exterior", name: "Exterior Only", emoji: "✨", dropOff: 80, mobile: 95 }
+    { 
+      id: "express", 
+      name: "Express Wash", 
+      emoji: "🧼", 
+      dropOff: 30, 
+      mobile: 40,
+      includesCeramic: false
+    },
+    { 
+      id: "full", 
+      name: "Full Detail", 
+      emoji: "💦", 
+      dropOff: 120, 
+      mobile: 140,
+      includesCeramic: false
+    },
+    { 
+      id: "interior", 
+      name: "Interior Only", 
+      emoji: "🧽", 
+      dropOff: 70, 
+      mobile: 85,
+      includesCeramic: false
+    },
+    { 
+      id: "exterior", 
+      name: "Exterior Only", 
+      emoji: "✨", 
+      dropOff: 80, 
+      mobile: 95,
+      includesCeramic: true
+    }
   ];
 
   const addOns = [
     { id: "pet-hair", name: "Pet Hair Removal", price: 20 },
-    { id: "headlight", name: "Headlight Restoration", price: 25 },
     { id: "engine", name: "Engine Bay Detail", price: 30 },
     { id: "ceramic", name: "Ceramic Spray Sealant", price: 20 }
   ];
 
+  const getAvailableAddOns = () => {
+    const selectedPackage = packages.find(p => p.id === formData.service);
+    if (selectedPackage?.includesCeramic) {
+      return addOns.filter(addon => addon.id !== "ceramic");
+    }
+    return addOns;
+  };
+
   const getAvailableTimeSlots = (date: Date) => {
     const day = date.getDay();
-    const isWeekend = day === 0 || day === 6; // Sunday = 0, Saturday = 6
+    const isWeekend = day === 0 || day === 6;
     
     if (isWeekend) {
       return ["9:30 AM", "11:00 AM", "2:00 PM", "4:00 PM"];
@@ -56,26 +92,41 @@ const Quote = () => {
 
   const calculateEstimate = () => {
     const selectedPackage = packages.find(p => p.id === formData.service);
-    if (!selectedPackage) return 0;
+    if (!selectedPackage) return { total: 0, breakdown: [] };
 
     let basePrice = formData.location === "mobile" ? selectedPackage.mobile : selectedPackage.dropOff;
+    const breakdown = [
+      { item: `${selectedPackage.name} (${formData.location === "mobile" ? "Mobile" : "Drop-off"})`, price: basePrice }
+    ];
     
-    // Adjust for dirtiness level
-    if (formData.dirtiness === "moderate") basePrice += 10;
-    if (formData.dirtiness === "heavy") basePrice += 25;
-    
-    // Water discount for mobile
-    if (formData.location === "mobile" && formData.useCustomerWater) {
-      basePrice -= 10;
+    if (formData.dirtiness === "moderate") {
+      basePrice += 10;
+      breakdown.push({ item: "Moderate dirt level", price: 10 });
+    }
+    if (formData.dirtiness === "heavy") {
+      basePrice += 25;
+      breakdown.push({ item: "Heavy dirt level", price: 25 });
     }
     
-    // Add-ons
+    if (formData.location === "mobile" && formData.useCustomerWater) {
+      basePrice -= 10;
+      breakdown.push({ item: "Customer water discount", price: -10 });
+    }
+    
     const addOnTotal = formData.addOns.reduce((total, addOnId) => {
       const addOn = addOns.find(a => a.id === addOnId);
-      return total + (addOn?.price || 0);
+      if (addOn) {
+        breakdown.push({ item: addOn.name, price: addOn.price });
+        return total + addOn.price;
+      }
+      return total;
     }, 0);
     
-    return basePrice + addOnTotal;
+    if (formData.wantsLittleTree) {
+      breakdown.push({ item: "Little Tree Black Ice (FREE)", price: 0 });
+    }
+    
+    return { total: basePrice + addOnTotal, breakdown };
   };
 
   const handleNext = () => {
@@ -214,7 +265,7 @@ const Quote = () => {
             {/* Step 3: Location */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                <RadioGroup value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
+                <RadioGroup value={formData.location} onValueChange={(value) => setFormData({...formData, location: value, useCustomerWater: false})}>
                   <div className="space-y-4">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="dropoff" id="dropoff" />
@@ -239,18 +290,26 @@ const Quote = () => {
 
                 {formData.location === "mobile" && (
                   <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                    <Label className="flex items-center space-x-2 cursor-pointer">
-                      <Checkbox 
-                        checked={formData.useCustomerWater}
-                        onCheckedChange={(checked) => setFormData({...formData, useCustomerWater: !!checked})}
-                      />
-                      <span>
-                        <strong>Can we use your water for $10 off?</strong>
-                        <span className="block text-sm text-gray-600">
-                          Save money by providing access to water at your location
-                        </span>
-                      </span>
-                    </Label>
+                    <h3 className="font-semibold mb-3">Water Source Option</h3>
+                    <RadioGroup 
+                      value={formData.useCustomerWater ? "yes" : "no"} 
+                      onValueChange={(value) => setFormData({...formData, useCustomerWater: value === "yes"})}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="yes" id="water-yes" />
+                          <Label htmlFor="water-yes" className="cursor-pointer">
+                            <strong>Yes, use my water for $10 off</strong>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="no" id="water-no" />
+                          <Label htmlFor="water-no" className="cursor-pointer">
+                            <strong>No, bring your own setup</strong>
+                          </Label>
+                        </div>
+                      </div>
+                    </RadioGroup>
                   </div>
                 )}
               </div>
@@ -362,7 +421,7 @@ const Quote = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">🔧 Add Optional Extras:</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {addOns.map((addOn) => (
+                    {getAvailableAddOns().map((addOn) => (
                       <Label key={addOn.id} className="flex items-center space-x-3 cursor-pointer">
                         <Checkbox 
                           checked={formData.addOns.includes(addOn.id)}
@@ -376,6 +435,20 @@ const Quote = () => {
                         </Card>
                       </Label>
                     ))}
+                    
+                    {/* Little Tree Option */}
+                    <Label className="flex items-center space-x-3 cursor-pointer">
+                      <Checkbox 
+                        checked={formData.wantsLittleTree}
+                        onCheckedChange={(checked) => setFormData({...formData, wantsLittleTree: !!checked})}
+                      />
+                      <Card className="flex-1 p-3 hover:bg-gray-50 transition-colors">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">Little Tree Black Ice</span>
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">FREE</Badge>
+                        </div>
+                      </Card>
+                    </Label>
                   </div>
                 </div>
 
@@ -409,16 +482,22 @@ const Quote = () => {
                         </span>
                       </div>
                     )}
-                    {formData.addOns.length > 0 && (
-                      <div className="flex justify-between">
-                        <span>Add-ons:</span>
-                        <span className="font-medium">{formData.addOns.length} selected</span>
+                    
+                    <hr className="my-3" />
+                    <h4 className="font-semibold mb-2">Cost Breakdown:</h4>
+                    {calculateEstimate().breakdown.map((item, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span>{item.item}</span>
+                        <span className={item.price === 0 ? "text-green-600" : item.price < 0 ? "text-green-600" : ""}>
+                          {item.price === 0 ? "FREE" : `${item.price > 0 ? '+' : ''}$${item.price}`}
+                        </span>
                       </div>
-                    )}
+                    ))}
+                    
                     <hr className="my-3" />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Estimated Total:</span>
-                      <span className="text-blue-600">${calculateEstimate()}</span>
+                      <span className="text-blue-600">${calculateEstimate().total}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -455,7 +534,7 @@ const Quote = () => {
               disabled={
                 (currentStep === 1 && !formData.service) ||
                 (currentStep === 2 && !formData.dirtiness) ||
-                (currentStep === 3 && !formData.location) ||
+                (currentStep === 3 && (!formData.location || (formData.location === "mobile" && formData.useCustomerWater === null))) ||
                 (currentStep === 4 && (!formData.selectedDate || !formData.selectedTime)) ||
                 (currentStep === 5 && (!formData.name || !formData.email || !formData.phone || (formData.location === "mobile" && !formData.address)))
               }
@@ -472,7 +551,7 @@ const Quote = () => {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Current Estimate</p>
-                <p className="text-3xl font-bold text-green-600">${calculateEstimate()}</p>
+                <p className="text-3xl font-bold text-green-600">${calculateEstimate().total}</p>
                 <p className="text-xs text-gray-500 mt-1">*Final price may vary based on vehicle condition</p>
               </div>
             </CardContent>

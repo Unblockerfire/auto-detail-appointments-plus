@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +12,9 @@ const Index = () => {
       emoji: "🧼",
       description: "A quick maintenance wash for regular upkeep.",
       features: [
-        "Foam cannon pre-wash",
+        "Regular soap wash",
         "Hand wash & rinse", 
-        "Wheels cleaned",
+        "Wheels scrubbed",
         "Windows wiped",
         "Light vacuum"
       ],
@@ -36,7 +35,8 @@ const Index = () => {
       ],
       dropOffPrice: 120,
       mobilePrice: 140,
-      popular: true
+      popular: true,
+      includesCeramic: false
     },
     {
       id: "interior",
@@ -46,8 +46,7 @@ const Index = () => {
       features: [
         "Full vacuum",
         "Stain removal",
-        "Steam clean + plastics conditioning",
-        "Odor neutralizer"
+        "Steam clean + plastics conditioning"
       ],
       dropOffPrice: 70,
       mobilePrice: 85
@@ -64,13 +63,13 @@ const Index = () => {
         "Tire shine + trim protect"
       ],
       dropOffPrice: 80,
-      mobilePrice: 95
+      mobilePrice: 95,
+      includesCeramic: true
     }
   ];
 
   const addOns = [
     { name: "Pet Hair Removal", price: 20 },
-    { name: "Headlight Restoration", price: 25 },
     { name: "Engine Bay Detail", price: 30 },
     { name: "Ceramic Spray Sealant", price: 20 }
   ];
@@ -126,10 +125,10 @@ const Index = () => {
                 Get Your Quote
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 text-lg">
-              <Clock className="mr-2 h-5 w-5" />
-              View Availability
-            </Button>
+          </div>
+          <div className="mt-6 text-sm text-blue-100">
+            <p><strong>Available Times:</strong></p>
+            <p>Weekends: 9:30am, 11am, 2pm, 4pm • Weekdays: 4:30pm, 5pm</p>
           </div>
         </div>
       </section>
