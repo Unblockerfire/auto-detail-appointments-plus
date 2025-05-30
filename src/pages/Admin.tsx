@@ -45,7 +45,7 @@ const Admin = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === "carsonlivezey2011@icloud.com" && password === "Korakora2011!") {
+    if (email === "Carsonlivezey2011@icloud.com" && password === "Korakora2011!") {
       setIsLoggedIn(true);
       setError("");
     } else {
