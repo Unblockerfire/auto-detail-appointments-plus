@@ -158,21 +158,24 @@ const Quote = () => {
     if (!selectedPackage) return;
 
     const appointmentData = {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      service: selectedPackage.name,
-      date: formData.selectedDate?.toLocaleDateString() || "",
-      time: formData.selectedTime,
-      location: formData.location === "mobile" ? "Mobile" : "Drop-off",
-      address: formData.address,
-      total: calculateEstimate().total,
-      dirtiness: formData.dirtiness,
-      useCustomerWater: formData.useCustomerWater,
-      addOns: formData.addOns,
-      wantsLittleTree: formData.wantsLittleTree,
-      notes: formData.notes
-    };
+  name: formData.name,
+  email: formData.email,
+  phone: formData.phone,
+  service: selectedPackage.name,
+  date: formData.selectedDate?.toLocaleDateString() || "",
+  time: formData.selectedTime,
+  location: formData.location === "mobile" ? "Mobile" : "Drop-off",
+  address: formData.address,
+  total: calculateEstimate().total,
+  dirtiness: formData.dirtiness,
+  useCustomerWater: formData.useCustomerWater,
+  addOns: formData.addOns,
+  wantsLittleTree: formData.wantsLittleTree,
+  notes: formData.notes
+};
+
+// ✅ Send quote to admin view
+(window as any).addAppointment(appointmentData);
 
     // Add appointment to admin system
     if (typeof window !== 'undefined' && (window as any).addAppointment) {
