@@ -4,11 +4,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Car } from "lucide-react";
+import { Car, Plus, Trash2 } from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import StatsCards from "@/components/admin/StatsCards";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import WorkerStats from "@/components/admin/WorkerStats";
+
+interface Appointment {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  service: string;
+  date: string;
+  time: string;
+  location: string;
+  address: string;
+  status: string;
+  assignedTo: string;
+  total: number;
+  dirtiness: string;
+  useCustomerWater: boolean;
+  addOns: string[];
+  wantsLittleTree: boolean;
+  notes: string;
+}
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -16,39 +36,12 @@ const Admin = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // Mock appointments data
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "(555) 123-4567",
-      service: "Full Detail",
-      date: "2024-01-15",
-      time: "9:30 AM",
-      location: "Mobile",
-      address: "123 Main St, City, ST",
-      status: "Pending",
-      assignedTo: "",
-      total: 140
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      phone: "(555) 987-6543",
-      service: "Express Wash",
-      date: "2024-01-16",
-      time: "4:30 PM",
-      location: "Drop-off",
-      address: "",
-      status: "Confirmed",
-      assignedTo: "Mike",
-      total: 30
-    }
-  ]);
+  // Real appointments that will be populated from quote submissions
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  const [workers] = useState(["Mike", "Sarah", "Carlos", "Alex"]);
+  // Worker management
+  const [workers, setWorkers] = useState<string[]>([]);
+  const [newWorkerName, setNewWorkerName] = useState("");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +51,21 @@ const Admin = () => {
     } else {
       setError("Invalid credentials");
     }
+  };
+
+  const addWorker = () => {
+    if (newWorkerName.trim() && !workers.includes(newWorkerName.trim())) {
+      setWorkers([...workers, newWorkerName.trim()]);
+      setNewWorkerName("");
+    }
+  };
+
+  const removeWorker = (workerName: string) => {
+    setWorkers(workers.filter(w => w !== workerName));
+    // Also remove from any assigned appointments
+    setAppointments(prev => prev.map(apt => 
+      apt.assignedTo === workerName ? { ...apt, assignedTo: "" } : apt
+    ));
   };
 
   const updateAppointmentStatus = (id: number, status: string) => {
@@ -71,6 +79,22 @@ const Admin = () => {
       apt.id === id ? { ...apt, assignedTo: worker } : apt
     ));
   };
+
+  // Function to add new appointments from quote submissions
+  const addAppointment = (appointmentData: Omit<Appointment, 'id' | 'status' | 'assignedTo'>) => {
+    const newAppointment: Appointment = {
+      ...appointmentData,
+      id: Date.now(), // Simple ID generation
+      status: "Pending",
+      assignedTo: ""
+    };
+    setAppointments(prev => [...prev, newAppointment]);
+  };
+
+  // Store the addAppointment function globally so the Quote page can access it
+  if (typeof window !== 'undefined') {
+    (window as any).addAppointment = addAppointment;
+  }
 
   if (!isLoggedIn) {
     return (
@@ -130,6 +154,47 @@ const Admin = () => {
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         <StatsCards appointments={appointments} workers={workers} />
+        
+        {/* Worker Management Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Worker Management</CardTitle>
+            <CardDescription>Add and manage your workers</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-2 mb-4">
+              <Input
+                placeholder="Enter worker name"
+                value={newWorkerName}
+                onChange={(e) => setNewWorkerName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addWorker()}
+              />
+              <Button onClick={addWorker} disabled={!newWorkerName.trim()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Worker
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {workers.map((worker) => (
+                <div key={worker} className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-lg">
+                  <span>{worker}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeWorker(worker)}
+                    className="h-6 w-6 p-0 hover:bg-red-100"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+              {workers.length === 0 && (
+                <p className="text-gray-500 text-sm">No workers added yet. Add your first worker above.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <AppointmentsTable 
           appointments={appointments}
           workers={workers}

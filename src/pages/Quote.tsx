@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,6 +149,36 @@ const Quote = () => {
         ? prev.addOns.filter(id => id !== addOnId)
         : [...prev.addOns, addOnId]
     }));
+  };
+
+  const handleSubmitQuote = () => {
+    const selectedPackage = packages.find(p => p.id === formData.service);
+    if (!selectedPackage) return;
+
+    const appointmentData = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      service: selectedPackage.name,
+      date: formData.selectedDate?.toLocaleDateString() || "",
+      time: formData.selectedTime,
+      location: formData.location === "mobile" ? "Mobile" : "Drop-off",
+      address: formData.address,
+      total: calculateEstimate().total,
+      dirtiness: formData.dirtiness,
+      useCustomerWater: formData.useCustomerWater,
+      addOns: formData.addOns,
+      wantsLittleTree: formData.wantsLittleTree,
+      notes: formData.notes
+    };
+
+    // Add appointment to admin system
+    if (typeof window !== 'undefined' && (window as any).addAppointment) {
+      (window as any).addAppointment(appointmentData);
+    }
+
+    console.log("Quote submitted:", appointmentData);
+    alert("Quote submitted! Your appointment request has been sent for approval. We'll contact you soon to confirm.");
   };
 
   return (
@@ -505,10 +534,7 @@ const Quote = () => {
                 <Button 
                   size="lg" 
                   className="w-full bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    console.log("Quote submitted:", formData);
-                    alert("Quote submitted! We'll contact you soon to confirm your appointment.");
-                  }}
+                  onClick={handleSubmitQuote}
                 >
                   Submit Quote Request
                 </Button>
